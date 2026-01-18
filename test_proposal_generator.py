@@ -77,11 +77,18 @@ class TestConfig(unittest.TestCase):
 class TestCostTimelineEstimator(unittest.TestCase):
     """Test cost and timeline estimation."""
     
-    def test_default_estimate(self):
+    @patch('cost_timeline_estimator.config')
+    @patch('cost_timeline_estimator.OpenAI')
+    def test_default_estimate(self, mock_openai, mock_config):
         """Test default cost estimation fallback."""
         from cost_timeline_estimator import CostTimelineEstimator
         
-        estimator = CostTimelineEstimator.__new__(CostTimelineEstimator)
+        # Mock the config and OpenAI client
+        mock_config.validate.return_value = True
+        mock_config.openai_api_key = "test-key"
+        mock_openai.return_value = MagicMock()
+        
+        estimator = CostTimelineEstimator()
         
         req = ClientRequirement(
             project_name="Test",
@@ -95,11 +102,18 @@ class TestCostTimelineEstimator(unittest.TestCase):
         self.assertIn('breakdown', result)
         self.assertGreater(result['development_hours'], 0)
     
-    def test_default_timeline(self):
+    @patch('cost_timeline_estimator.config')
+    @patch('cost_timeline_estimator.OpenAI')
+    def test_default_timeline(self, mock_openai, mock_config):
         """Test default timeline estimation fallback."""
         from cost_timeline_estimator import CostTimelineEstimator
         
-        estimator = CostTimelineEstimator.__new__(CostTimelineEstimator)
+        # Mock the config and OpenAI client
+        mock_config.validate.return_value = True
+        mock_config.openai_api_key = "test-key"
+        mock_openai.return_value = MagicMock()
+        
+        estimator = CostTimelineEstimator()
         
         cost = CostEstimate(
             development_hours=160.0,
