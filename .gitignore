@@ -39,6 +39,8 @@ ENV/
 proposals/
 *.pdf
 *.docx
+demo_proposal.txt
+demo_proposal.md
 
 # OS
 .DS_Store
