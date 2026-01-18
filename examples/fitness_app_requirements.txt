@@ -1,0 +1,21 @@
+Project Name: Mobile Fitness Tracking App
+
+Project Description:
+Create a mobile application for iOS and Android that helps users track their fitness activities, set goals, and monitor progress over time.
+
+Key Features:
+- User registration and profile management
+- Activity tracking (running, cycling, swimming, etc.)
+- GPS route tracking and mapping
+- Calorie and nutrition tracking
+- Goal setting and progress monitoring
+- Social features (share achievements, follow friends)
+- Integration with wearable devices (Apple Watch, Fitbit)
+- Workout plans and exercise library
+- Statistics and analytics dashboard
+
+Technology Preferences: React Native for cross-platform development, Firebase for backend
+
+Target Audience: Health-conscious individuals, fitness enthusiasts
+
+Constraints: Initial MVP version in 3 months

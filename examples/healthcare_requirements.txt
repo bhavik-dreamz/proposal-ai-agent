@@ -1,0 +1,21 @@
+Project Name: Healthcare Patient Portal
+
+Project Description:
+Develop a secure patient portal that allows patients to access their medical records, schedule appointments, communicate with healthcare providers, and manage prescriptions online.
+
+Key Features:
+- Secure patient authentication and authorization
+- Electronic health records (EHR) access
+- Appointment scheduling and reminders
+- Secure messaging with healthcare providers
+- Prescription refill requests
+- Lab results viewer
+- Health data tracking (vitals, medications)
+- Mobile app for iOS and Android
+- HIPAA compliance
+
+Technology Preferences: HIPAA-compliant cloud infrastructure, encrypted data storage
+
+Target Audience: Patients of all ages, healthcare providers
+
+Constraints: Must comply with HIPAA regulations, high security requirements

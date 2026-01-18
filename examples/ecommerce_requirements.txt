@@ -1,0 +1,22 @@
+Project Name: E-Commerce Platform Redesign
+
+Project Description:
+We need to modernize our existing e-commerce platform to improve user experience, increase conversion rates, and support mobile shopping. The platform should handle high traffic volumes and integrate with our existing inventory management system.
+
+Key Features:
+- Responsive web design optimized for mobile and desktop
+- Product catalog with advanced search and filtering
+- Shopping cart and secure checkout process
+- User account management and order history
+- Payment gateway integration (Stripe, PayPal)
+- Real-time inventory tracking
+- Admin dashboard for product and order management
+- Email notifications for order confirmations and shipping updates
+- Product recommendations using AI
+- Multi-language support
+
+Technology Preferences: React for frontend, Node.js for backend, PostgreSQL database, AWS cloud hosting
+
+Target Audience: Online shoppers aged 18-65, primarily mobile users
+
+Constraints: Budget of $50,000, timeline of 4 months, must integrate with existing SAP system
