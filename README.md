@@ -2,7 +2,7 @@
 
 > **Forge Winning Proposals in Minutes**
 
-AI-powered proposal generator for IT project managers. Automatically generates professional project proposals using OpenAI GPT-4, analyzes client requirements, and provides accurate cost and timeline estimates.
+Transform client requirements into professional IT project proposals using the power of OpenAI GPT-4. Get accurate cost estimates and realistic timelines automatically.
 
 ## Overview
 

@@ -13,7 +13,7 @@ AI-powered proposal generator for IT project managers that:
 - "Forge" implies crafting/building something strong and professional
 - Clear indication of AI technology
 - Memorable and professional
-- Domain available: proposalforge.ai
+- Strong branding potential
 
 ### 2. **ProposiGPT**
 **Rationale**:
