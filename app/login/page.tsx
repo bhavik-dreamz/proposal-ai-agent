@@ -88,13 +88,13 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
+        {/* <div className="mt-6 text-center text-sm text-gray-600">
           <p>Demo Credentials:</p>
           <p className="font-mono text-xs mt-1">
             Admin: admin@example.com / admin123
           </p>
           <p className="font-mono text-xs">User: user@example.com / user123</p>
-        </div>
+        </div> */}
       </Card>
     </div>
   );
