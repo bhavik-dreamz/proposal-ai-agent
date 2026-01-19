@@ -5,6 +5,8 @@ An AI-powered Next.js application that helps IT project managers generate profes
 ## Features
 
 - 🤖 **AI-Powered Generation**: Automatically generates professional proposals using GPT-4
+- � **Authentication & Authorization**: Secure login with role-based access control (Admin/User)
+- 👥 **User Management**: Admin panel to manage users and roles
 - 📊 **Smart Analysis**: Detects project type and complexity from requirements
 - 🔍 **Vector Search**: Finds similar past proposals using embeddings
 - 💰 **Cost Estimation**: Automatically calculates cost and timeline estimates
@@ -16,73 +18,65 @@ An AI-powered Next.js application that helps IT project managers generate profes
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router, TypeScript)
+- **Authentication**: NextAuth.js v5
 - **AI**: Vercel AI SDK with OpenAI GPT-4
-- **Database**: Supabase (PostgreSQL + Vector Store with pgvector)
+- **Database**: PostgreSQL with Prisma ORM
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Deployment**: Vercel (recommended)
 
 ## Prerequisites
 
 - Node.js 18+ and npm
-- Supabase account (free tier works)
+- PostgreSQL database (or use Neon, Supabase, etc.)
 - OpenAI API key
 
-## Setup Instructions
+## Quick Start
+
+See [QUICK_START.md](QUICK_START.md) for detailed setup instructions.
 
 ### 1. Clone and Install
 
 ```bash
 git clone <your-repo-url>
-cd proposalaiagent
+cd proposal-ai-agent
 npm install
 ```
 
-### 2. Set Up Supabase
+### 2. Configure Environment Variables
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run the schema:
-
-```bash
-# Run the schema file
-psql -h <your-db-host> -U postgres -d postgres -f supabase/schema.sql
-```
-
-Or copy and paste the contents of `supabase/schema.sql` into the Supabase SQL Editor.
-
-3. Run the seed data:
+Copy `.env.example` to `.env` and fill in your credentials:
 
 ```bash
-# Run the seed file
-psql -h <your-db-host> -U postgres -d postgres -f supabase/seed.sql
+cp .env.example .env
 ```
 
-Or copy and paste the contents of `supabase/seed.sql` into the Supabase SQL Editor.
-
-4. Enable the pgvector extension in your Supabase project (should be enabled automatically by the schema)
-
-### 3. Configure Environment Variables
-
-Create a `.env.local` file in the root directory:
-
+Required variables:
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# OpenAI
+DATABASE_URL=postgresql://user:password@localhost:5432/proposal_ai_db
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-super-secret-key-change-this
 OPENAI_API_KEY=your_openai_api_key
-
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+GROQ_API_KEY=your_groq_api_key
 ```
 
-You can find your Supabase credentials in:
-- Project Settings → API → Project URL (for `NEXT_PUBLIC_SUPABASE_URL`)
-- Project Settings → API → anon/public key (for `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
-- Project Settings → API → service_role key (for `SUPABASE_SERVICE_ROLE_KEY`)
+Generate a secure `NEXTAUTH_SECRET`:
+```bash
+openssl rand -base64 32
+```
 
-Get your OpenAI API key from [platform.openai.com](https://platform.openai.com/api-keys)
+### 3. Set Up Database
+
+```bash
+# Run migrations
+npm run prisma:migrate
+
+# Seed with default users
+npm run prisma:seed
+```
+
+Default accounts created:
+- Admin: `admin@example.com` / `admin123`
+- User: `user@example.com` / `user123`
 
 ### 4. Run the Development Server
 
@@ -90,7 +84,16 @@ Get your OpenAI API key from [platform.openai.com](https://platform.openai.com/a
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) and login with the default credentials.
+
+## Authentication
+
+The application includes a complete authentication system with role-based access control:
+
+- **Admin Role**: Full access including user management and settings
+- **User Role**: Access to proposal creation and viewing
+
+See [AUTH_GUIDE.md](AUTH_GUIDE.md) for detailed authentication documentation.
 
 ## Project Structure
 

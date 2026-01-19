@@ -1,12 +1,16 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { FileText, Home, Settings, Plus } from 'lucide-react';
+import { FileText, Home, Settings, Plus, Users, LogOut } from 'lucide-react';
+import { auth, signOut } from '@/lib/auth';
+import { Role } from '@prisma/client';
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+  const isAdmin = session?.user?.role === Role.ADMIN;
   return (
     <div className="min-h-screen bg-background">
       <nav className="border-b">
@@ -34,12 +38,33 @@ export default function DashboardLayout({
                   All Proposals
                 </Button>
               </Link>
-              <Link href="/dashboard/settings">
-                <Button variant="ghost" size="sm">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
+              {isAdmin && (
+                <>
+                  <Link href="/dashboard/users">
+                    <Button variant="ghost" size="sm">
+                      <Users className="mr-2 h-4 w-4" />
+                      Users
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/settings">
+                    <Button variant="ghost" size="sm">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Button>
+                  </Link>
+                </>
+              )}
+              <form
+                action={async () => {
+                  'use server';
+                  await signOut({ redirectTo: '/login' });
+                }}
+              >
+                <Button variant="ghost" size="sm" type="submit">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
                 </Button>
-              </Link>
+              </form>
             </div>
           </div>
         </div>
