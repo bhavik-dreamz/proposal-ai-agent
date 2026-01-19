@@ -80,7 +80,7 @@ export function ProposalForm({ onSubmit, isLoading }: ProposalFormProps) {
             <SelectTrigger id="project_type">
               <SelectValue placeholder="Auto-detect" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-neutral-900">
               <SelectItem value="MERN">MERN</SelectItem>
               <SelectItem value="MEAN">MEAN</SelectItem>
               <SelectItem value="WordPress">WordPress</SelectItem>
@@ -102,7 +102,7 @@ export function ProposalForm({ onSubmit, isLoading }: ProposalFormProps) {
             <SelectTrigger id="complexity">
               <SelectValue placeholder="Auto-detect" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-neutral-900">
               <SelectItem value="simple">Simple</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="complex">Complex</SelectItem>
