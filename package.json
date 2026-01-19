@@ -35,7 +35,8 @@
     "prisma:migrate:prod": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "embeddings:regenerate": "tsx scripts/regenerate-embeddings.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

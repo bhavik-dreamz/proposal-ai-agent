@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { storeSampleProposalEmbedding } from '@/lib/vector-search';
 
 export async function GET() {
   try {
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
         embedding: null,
       },
     });
+
+    // Generate and store embedding asynchronously
+    const textToEmbed = `${title} ${requirementsExcerpt || ''} ${fullContent}`.substring(0, 5000);
+    storeSampleProposalEmbedding(sampleProposal.id, textToEmbed).catch(console.error);
 
     return NextResponse.json(sampleProposal);
   } catch (error) {

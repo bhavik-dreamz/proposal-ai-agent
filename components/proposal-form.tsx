@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ProjectType, Complexity } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Circle } from 'lucide-react';
 
 interface ProposalFormProps {
   onSubmit: (data: {
@@ -25,20 +25,47 @@ interface ProposalFormProps {
   isLoading?: boolean;
 }
 
+const generationSteps = [
+  { id: 1, label: 'Reviewing client requirements' },
+  { id: 2, label: 'Detecting project type & complexity' },
+  { id: 3, label: 'Searching similar proposals' },
+  { id: 4, label: 'Analyzing tech stack & pricing' },
+  { id: 5, label: 'Generating proposal content' },
+  { id: 6, label: 'Finalizing document' },
+];
+
 export function ProposalForm({ onSubmit, isLoading }: ProposalFormProps) {
   const [clientName, setClientName] = useState('');
   const [requirements, setRequirements] = useState('');
   const [projectType, setProjectType] = useState<ProjectType | undefined>();
   const [complexity, setComplexity] = useState<Complexity | undefined>();
+  const [currentStep, setCurrentStep] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({
-      client_name: clientName,
-      requirements,
-      project_type: projectType,
-      complexity,
-    });
+    setCurrentStep(1);
+    
+    // Simulate step progression
+    const stepInterval = setInterval(() => {
+      setCurrentStep((prev) => {
+        if (prev < generationSteps.length) {
+          return prev + 1;
+        }
+        return prev;
+      });
+    }, 2000);
+    
+    try {
+      await onSubmit({
+        client_name: clientName,
+        requirements,
+        project_type: projectType,
+        complexity,
+      });
+    } finally {
+      clearInterval(stepInterval);
+      setCurrentStep(0);
+    }
   };
 
   return (
@@ -113,6 +140,32 @@ export function ProposalForm({ onSubmit, isLoading }: ProposalFormProps) {
           </p>
         </div>
       </div>
+
+      {isLoading && currentStep > 0 && (
+        <div className="space-y-3 rounded-lg border bg-muted/50 p-4">
+          <div className="text-sm font-medium">Generation Progress</div>
+          {generationSteps.map((step) => (
+            <div key={step.id} className="flex items-center gap-3">
+              {currentStep > step.id ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              ) : currentStep === step.id ? (
+                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              ) : (
+                <Circle className="h-5 w-5 text-gray-300" />
+              )}
+              <span
+                className={`text-sm ${
+                  currentStep >= step.id
+                    ? 'font-medium text-foreground'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
         {isLoading ? (

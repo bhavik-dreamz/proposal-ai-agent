@@ -163,7 +163,10 @@ export default function UsersPage() {
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent 
+            className="bg-white dark:bg-neutral-900"
+            onInteractOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>
                 {editingUser ? "Edit User" : "Create New User"}
