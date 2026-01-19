@@ -121,4 +121,5 @@ export interface ProposalGenerationResponse {
   project_type: ProjectType;
   complexity: Complexity;
   similar_proposals?: SampleProposal[];
+  agent_flow?: string[];
 }

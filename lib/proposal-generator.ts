@@ -248,6 +248,14 @@ Example format: ["User Authentication", "Payment Gateway", "Admin Dashboard"]`;
 export async function generateProposal(
   request: ProposalGenerationRequest
 ): Promise<ProposalGenerationResponse> {
+  const agentFlow = [
+    'Requirements Analyst: capture client brief and clarify goals',
+    'Classifier: detect project type and complexity',
+    'Similarity Scout: pull past proposals and samples',
+    'Estimator: apply pricing rules and effort model',
+    'Drafting Agent: generate proposal narrative',
+    'Human Polish: format and refine for delivery',
+  ];
   // Detect project type and complexity if not provided
   const projectType = request.project_type || await detectProjectType(request.requirements);
   const complexity = request.complexity || await detectComplexity(request.requirements);
@@ -272,30 +280,28 @@ export async function generateProposal(
   const templateContent = template?.content || '';
 
   // Build the AI prompt
-  const systemPrompt = `You are an expert proposal writer for an IT project management company. Always generate a complete, professional proposal even if you don't have all the context.
-
-Your role:
-1. Analyze client requirements carefully
-2. Identify the best technology stack
-3. Generate a professional, detailed proposal
+  const systemPrompt = `You are an expert multi-agent proposal writer for an IT project management company. Follow this pipeline strictly: 
+1) Requirements Analyst: analyze the client brief and clarify objectives.
+2) Classifier: detect project type and complexity.
+3) Similarity Scout: pull the closest past proposals and sample library references.
+4) Estimator: apply pricing rules and effort models to produce cost and timeline.
+5) Drafting Agent: write the proposal.
+6) Human Polish: format and refine so it reads like a human consultant.
 
 Writing Style:
-- Professional but friendly and conversational
-- Use simple language, avoid jargon
-- Be specific with timelines and costs
-- Show understanding of client needs
-- Structure: Executive Summary → Understanding → Solution → Technical → Timeline → Pricing → Next Steps
+- Professional, warm, and human-polished; avoid robotic tone.
+- Use simple language, avoid jargon; mirror client terminology.
+- Be specific with timelines, costs, and rationale.
+- Structure: Executive Summary → Understanding → Solution → Technical → Timeline → Pricing → Next Steps.
 
 Rules:
-- Always base estimates on similar past projects
-- Be realistic with timelines
-- Explain WHY you chose a particular tech stack
-- Include specific features, not generic statements
-- Make it sound human, not robotic
-- Use the client's language/terminology from their requirements
+- Base estimates on similar past projects and pricing rules.
+- Be realistic and explain WHY you chose the stack and approach.
+- Include specific features, not generic filler.
+- Replace placeholders with actual content.
 
 Output Format:
-Return a complete proposal in Markdown format with proper headings and structure.`;
+Return a complete proposal in Markdown with headings and the above structure.`;
 
   const userPrompt = `Generate a professional proposal for:
 
@@ -338,6 +344,7 @@ Generate a complete, professional proposal that addresses all requirements. Repl
       project_type: projectType,
       complexity,
       similar_proposals: similarProposals,
+      agent_flow: agentFlow,
     };
   } catch (error) {
     console.error('Error generating proposal:', error);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProposalForm } from '@/components/proposal-form';
 import { ProposalPreview } from '@/components/proposal-preview';
@@ -8,6 +8,9 @@ import { ProposalEditor } from '@/components/proposal-editor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingSpinner } from '@/components/loading-spinner';
+import { GenerationProgress } from '@/components/generation-progress';
+import { AgentStatus } from '@/components/agent-status';
+import { Bot, DollarSign, FileSearch, FileText, Wand2 } from 'lucide-react';
 import type { Proposal } from '@/types';
 
 export default function NewProposalPage() {
@@ -15,6 +18,80 @@ export default function NewProposalPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const generationSteps = [
+    { id: 1, label: 'Reviewing client requirements' },
+    { id: 2, label: 'Detecting project type & complexity' },
+    { id: 3, label: 'Searching similar proposals' },
+    { id: 4, label: 'Analyzing sample proposals & costing' },
+    { id: 5, label: 'Generating proposal content' },
+    { id: 6, label: 'Finalizing document' },
+  ];
+
+  const agentStages = [
+    {
+      title: 'Requirements Analyst',
+      description: 'Parses client brief and clarifies needs.',
+      stepIds: [1, 2],
+      icon: Bot,
+    },
+    {
+      title: 'Similarity Scout',
+      description: 'Pulls past proposals and sample library matches.',
+      stepIds: [3],
+      icon: FileSearch,
+    },
+    {
+      title: 'Costing & Timeline',
+      description: 'Applies pricing rules and effort models.',
+      stepIds: [4],
+      icon: DollarSign,
+    },
+    {
+      title: 'Drafting Agent',
+      description: 'Writes tailored proposal narrative.',
+      stepIds: [5],
+      icon: FileText,
+    },
+    {
+      title: 'Human Polish',
+      description: 'Formats and prepares for delivery.',
+      stepIds: [6],
+      icon: Wand2,
+    },
+  ];
+
+  const progressTimer = useRef<NodeJS.Timeout | null>(null);
+  const resetTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const startProgress = () => {
+    if (progressTimer.current) clearInterval(progressTimer.current);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    setCurrentStep(1);
+    progressTimer.current = setInterval(() => {
+      setCurrentStep((prev) => (prev < generationSteps.length ? prev + 1 : prev));
+    }, 1500);
+  };
+
+  const stopProgress = (completed: boolean) => {
+    if (progressTimer.current) clearInterval(progressTimer.current);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+
+    if (completed) {
+      setCurrentStep(generationSteps.length);
+      resetTimer.current = setTimeout(() => setCurrentStep(0), 1200);
+    } else {
+      setCurrentStep(0);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (progressTimer.current) clearInterval(progressTimer.current);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    };
+  }, []);
 
   const handleGenerate = async (data: {
     client_name: string;
@@ -24,7 +101,9 @@ export default function NewProposalPage() {
   }) => {
     setIsGenerating(true);
     setError(null);
+    startProgress();
 
+    let generationSuccessful = false;
     try {
       const response = await fetch('/api/generate-proposal', {
         method: 'POST',
@@ -60,10 +139,12 @@ export default function NewProposalPage() {
           updated_at: new Date().toISOString(),
         });
       }
+      generationSuccessful = true;
     } catch (err: any) {
       setError(err.message || 'Failed to generate proposal');
       console.error('Error generating proposal:', err);
     } finally {
+      stopProgress(generationSuccessful);
       setIsGenerating(false);
     }
   };
@@ -114,7 +195,12 @@ export default function NewProposalPage() {
               <CardTitle>Project Requirements</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProposalForm onSubmit={handleGenerate} isLoading={isGenerating} />
+              <ProposalForm
+                onSubmit={handleGenerate}
+                isLoading={isGenerating}
+                steps={generationSteps}
+                currentStep={currentStep}
+              />
             </CardContent>
           </Card>
 
@@ -124,7 +210,14 @@ export default function NewProposalPage() {
             </CardHeader>
             <CardContent>
               {isGenerating ? (
-                <LoadingSpinner message="AI is generating your proposal..." />
+                <div className="space-y-4">
+                  <LoadingSpinner message="AI agent is generating your proposal..." />
+                  <GenerationProgress
+                    steps={generationSteps}
+                    currentStep={currentStep}
+                  />
+                  <AgentStatus currentStep={currentStep} stages={agentStages} />
+                </div>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <p>Fill out the form to generate a proposal</p>
