@@ -1,5 +1,5 @@
 import { openai } from './openai';
-import { supabaseAdmin } from './supabase';
+import { prisma } from './prisma';
 import type { SampleProposal, Proposal } from '@/types';
 
 /**
@@ -26,38 +26,30 @@ export async function searchSimilarProposals(
     // Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
 
-    // Build the query with RPC call for vector similarity
-    // Note: This requires a function in Supabase for vector similarity search
-    // For now, we'll use a fallback approach
-    let queryBuilder = supabaseAdmin
-      .from('sample_proposals')
-      .select('*')
-      .eq('is_approved', true)
-      .limit(limit * 2); // Get more results to filter
+    // Fetch sample proposals from database
+    const proposals = await prisma.sampleProposal.findMany({
+      where: {
+        isApproved: true,
+        ...(projectType && { projectType }),
+      },
+      take: limit * 2, // Get more results to filter
+    });
 
-    if (projectType) {
-      queryBuilder = queryBuilder.eq('project_type', projectType);
-    }
-
-    const { data, error } = await queryBuilder;
-
-    if (error) {
-      console.error('Error searching similar proposals:', error);
-      return await fallbackTextSearch(query, projectType, limit);
-    }
-
-    if (!data || data.length === 0) {
+    if (!proposals || proposals.length === 0) {
       return await fallbackTextSearch(query, projectType, limit);
     }
 
     // If embeddings exist, calculate cosine similarity
-    const proposalsWithSimilarity = data
-      .filter((p) => p.embedding && Array.isArray(p.embedding))
+    const proposalsWithSimilarity = proposals
+      .filter((p) => p.embedding)
       .map((p) => {
-        const similarity = cosineSimilarity(queryEmbedding, p.embedding as number[]);
+        const embeddingArray = p.embedding ? JSON.parse(p.embedding) : null;
+        if (!embeddingArray) return null;
+        const similarity = cosineSimilarity(queryEmbedding, embeddingArray);
         return { ...p, similarity };
       })
-      .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+      .filter((p) => p !== null)
+      .sort((a, b) => (b!.similarity || 0) - (a!.similarity || 0))
       .slice(0, limit)
       .map(({ similarity, ...proposal }) => proposal);
 
@@ -100,24 +92,15 @@ async function fallbackTextSearch(
   projectType?: string,
   limit: number = 3
 ): Promise<SampleProposal[]> {
-  let queryBuilder = supabaseAdmin
-    .from('sample_proposals')
-    .select('*')
-    .eq('is_approved', true)
-    .limit(limit);
+  const proposals = await prisma.sampleProposal.findMany({
+    where: {
+      isApproved: true,
+      ...(projectType && { projectType }),
+    },
+    take: limit,
+  });
 
-  if (projectType) {
-    queryBuilder = queryBuilder.eq('project_type', projectType);
-  }
-
-  const { data, error } = await queryBuilder;
-
-  if (error) {
-    console.error('Error in fallback search:', error);
-    return [];
-  }
-
-  return (data || []) as SampleProposal[];
+  return proposals as SampleProposal[];
 }
 
 /**
@@ -130,14 +113,10 @@ export async function storeProposalEmbedding(
   try {
     const embedding = await generateEmbedding(text);
 
-    const { error } = await supabaseAdmin
-      .from('proposals')
-      .update({ embedding })
-      .eq('id', proposalId);
-
-    if (error) {
-      console.error('Error storing embedding:', error);
-    }
+    await prisma.proposal.update({
+      where: { id: proposalId },
+      data: { embedding: JSON.stringify(embedding) },
+    });
   } catch (error) {
     console.error('Error generating/storing embedding:', error);
   }
@@ -153,14 +132,10 @@ export async function storeSampleProposalEmbedding(
   try {
     const embedding = await generateEmbedding(text);
 
-    const { error } = await supabaseAdmin
-      .from('sample_proposals')
-      .update({ embedding })
-      .eq('id', sampleId);
-
-    if (error) {
-      console.error('Error storing sample embedding:', error);
-    }
+    await prisma.sampleProposal.update({
+      where: { id: sampleId },
+      data: { embedding: JSON.stringify(embedding) },
+    });
   } catch (error) {
     console.error('Error generating/storing sample embedding:', error);
   }

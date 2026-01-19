@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 import type { Proposal } from '@/types';
 
 export const runtime = 'nodejs';
@@ -12,31 +12,16 @@ export async function GET(request: NextRequest) {
     const projectType = searchParams.get('project_type');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    let query = supabaseAdmin
-      .from('proposals')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const proposals = await prisma.proposal.findMany({
+      where: {
+        ...(status && { status }),
+        ...(projectType && { projectType }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
 
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    if (projectType) {
-      query = query.eq('project_type', projectType);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching proposals:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch proposals' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ proposals: data || [] });
+    return NextResponse.json({ proposals });
   } catch (error: any) {
     console.error('Error in GET proposals:', error);
     return NextResponse.json(
@@ -51,31 +36,21 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { data, error } = await supabaseAdmin
-      .from('proposals')
-      .insert({
-        client_name: body.client_name,
-        client_email: body.client_email,
-        project_type: body.project_type,
+    const proposal = await prisma.proposal.create({
+      data: {
+        clientName: body.client_name,
+        clientEmail: body.client_email,
+        projectType: body.project_type,
         requirements: body.requirements,
-        generated_proposal: body.generated_proposal,
-        cost_estimate: body.cost_estimate,
-        timeline_weeks: body.timeline_weeks,
+        generatedProposal: body.generated_proposal,
+        costEstimate: body.cost_estimate,
+        timelineWeeks: body.timeline_weeks,
         complexity: body.complexity,
         status: body.status || 'draft',
-      } as any)
-      .select()
-      .single();
+      },
+    });
 
-    if (error) {
-      console.error('Error creating proposal:', error);
-      return NextResponse.json(
-        { error: 'Failed to create proposal' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ proposal: data });
+    return NextResponse.json({ proposal });
   } catch (error: any) {
     console.error('Error in POST proposals:', error);
     return NextResponse.json(

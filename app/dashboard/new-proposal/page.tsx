@@ -18,7 +18,6 @@ export default function NewProposalPage() {
 
   const handleGenerate = async (data: {
     client_name: string;
-    client_email?: string;
     requirements: string;
     project_type?: string;
     complexity?: string;
@@ -50,7 +49,6 @@ export default function NewProposalPage() {
         setProposal({
           id: '',
           client_name: data.client_name,
-          client_email: data.client_email,
           project_type: result.project_type,
           requirements: data.requirements,
           generated_proposal: result.proposal,

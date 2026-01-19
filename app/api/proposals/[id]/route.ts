@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
@@ -11,20 +11,18 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const { data, error } = await supabaseAdmin
-      .from('proposals')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const proposal = await prisma.proposal.findUnique({
+      where: { id },
+    });
 
-    if (error || !data) {
+    if (!proposal) {
       return NextResponse.json(
         { error: 'Proposal not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ proposal: data });
+    return NextResponse.json({ proposal });
   } catch (error: any) {
     console.error('Error fetching proposal:', error);
     return NextResponse.json(
@@ -43,25 +41,24 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const { data, error } = await supabaseAdmin
-      .from('proposals')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating proposal:', error);
-      return NextResponse.json(
-        { error: 'Failed to update proposal' },
-        { status: 500 }
-      );
+    // Map body field names if needed (e.g., generated_proposal -> generatedProposal)
+    const updateData: any = {};
+    for (const [key, value] of Object.entries(body)) {
+      if (key === 'generated_proposal') updateData.generatedProposal = value;
+      else if (key === 'client_name') updateData.clientName = value;
+      else if (key === 'client_email') updateData.clientEmail = value;
+      else if (key === 'project_type') updateData.projectType = value;
+      else if (key === 'cost_estimate') updateData.costEstimate = value;
+      else if (key === 'timeline_weeks') updateData.timelineWeeks = value;
+      else updateData[key] = value;
     }
 
-    return NextResponse.json({ proposal: data });
+    const proposal = await prisma.proposal.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json({ proposal });
   } catch (error: any) {
     console.error('Error updating proposal:', error);
     return NextResponse.json(
@@ -79,18 +76,9 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const { error } = await supabaseAdmin
-      .from('proposals')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting proposal:', error);
-      return NextResponse.json(
-        { error: 'Failed to delete proposal' },
-        { status: 500 }
-      );
-    }
+    await prisma.proposal.delete({
+      where: { id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

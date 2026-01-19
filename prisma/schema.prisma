@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Proposal {
+  id                 String   @id @default(cuid())
+  clientName         String   @map("client_name")
+  clientEmail        String?  @map("client_email")
+  projectType        String   @map("project_type")
+  requirements       String
+  generatedProposal  String?  @map("generated_proposal")
+  costEstimate       Decimal? @map("cost_estimate") @db.Decimal(10, 2)
+  timelineWeeks      Int?     @map("timeline_weeks")
+  complexity         String?
+  status             String   @default("draft") // 'draft', 'sent', 'accepted', 'rejected'
+  embedding          String?  @db.Text // Storing as JSON string for pgvector compatibility
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([projectType])
+  @@index([status])
+  @@map("proposals")
+}
+
+model Template {
+  id            String   @id @default(cuid())
+  name          String
+  projectType   String   @map("project_type")
+  description   String?
+  content       String
+  sections      Json?    // {executive_summary, technical_approach, timeline, pricing}
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([projectType])
+  @@map("templates")
+}
+
+model TechStack {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  description         String?
+  typicalFeatures     Json?    @map("typical_features") // Array of common features
+  baseCost            Decimal? @map("base_cost") @db.Decimal(10, 2)
+  costPerFeature      Decimal? @map("cost_per_feature") @db.Decimal(10, 2)
+  baseTimelineWeeks   Int?     @map("base_timeline_weeks")
+  additionalInfo      Json?    @map("additional_info")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("tech_stacks")
+}
+
+model SampleProposal {
+  id                  String   @id @default(cuid())
+  title               String
+  projectType         String   @map("project_type")
+  fullContent         String   @map("full_content")
+  requirementsExcerpt String?  @map("requirements_excerpt")
+  cost                Decimal? @db.Decimal(10, 2)
+  timelineWeeks       Int?     @map("timeline_weeks")
+  isApproved          Boolean  @default(true) @map("is_approved") // Only use approved samples
+  embedding           String?  @db.Text // Storing as JSON string
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([projectType])
+  @@map("sample_proposals")
+}
+
+model PricingRule {
+  id                  String   @id @default(cuid())
+  featureName         String   @map("feature_name")
+  projectType         String?  @map("project_type")
+  baseCost            Decimal? @map("base_cost") @db.Decimal(10, 2)
+  timeHours           Int?     @map("time_hours")
+  complexityMultiplier Json?   @map("complexity_multiplier") // {simple: 1, medium: 1.5, complex: 2}
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("pricing_rules")
+}

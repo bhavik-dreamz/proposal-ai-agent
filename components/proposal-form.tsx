@@ -18,7 +18,6 @@ import { Loader2 } from 'lucide-react';
 interface ProposalFormProps {
   onSubmit: (data: {
     client_name: string;
-    client_email?: string;
     requirements: string;
     project_type?: ProjectType;
     complexity?: Complexity;
@@ -28,7 +27,6 @@ interface ProposalFormProps {
 
 export function ProposalForm({ onSubmit, isLoading }: ProposalFormProps) {
   const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
   const [requirements, setRequirements] = useState('');
   const [projectType, setProjectType] = useState<ProjectType | undefined>();
   const [complexity, setComplexity] = useState<Complexity | undefined>();
@@ -37,7 +35,6 @@ export function ProposalForm({ onSubmit, isLoading }: ProposalFormProps) {
     e.preventDefault();
     await onSubmit({
       client_name: clientName,
-      client_email: clientEmail || undefined,
       requirements,
       project_type: projectType,
       complexity,
@@ -54,17 +51,6 @@ export function ProposalForm({ onSubmit, isLoading }: ProposalFormProps) {
           onChange={(e) => setClientName(e.target.value)}
           required
           placeholder="Enter client name"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="client_email">Client Email (Optional)</Label>
-        <Input
-          id="client_email"
-          type="email"
-          value={clientEmail}
-          onChange={(e) => setClientEmail(e.target.value)}
-          placeholder="client@example.com"
         />
       </div>
 

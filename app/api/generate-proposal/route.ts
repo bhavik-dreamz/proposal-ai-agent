@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateProposal } from '@/lib/proposal-generator';
 import { storeProposalEmbedding } from '@/lib/vector-search';
-import { supabaseAdmin } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 import type { ProposalGenerationRequest } from '@/types';
 
 export const runtime = 'nodejs';
@@ -23,35 +23,26 @@ export async function POST(request: NextRequest) {
     const result = await generateProposal(body);
 
     // Save to database
-    const { data: proposal, error: dbError } = await supabaseAdmin
-      .from('proposals')
-      .insert({
-        client_name: body.client_name,
-        client_email: body.client_email || null,
-        project_type: result.project_type,
+    const proposal = await prisma.proposal.create({
+      data: {
+        clientName: body.client_name,
+        clientEmail: body.client_email || null,
+        projectType: result.project_type,
         requirements: body.requirements,
-        generated_proposal: result.proposal,
-        cost_estimate: result.cost_estimate,
-        timeline_weeks: result.timeline_weeks,
+        generatedProposal: result.proposal,
+        costEstimate: result.cost_estimate,
+        timelineWeeks: result.timeline_weeks,
         complexity: result.complexity,
         status: 'draft',
-      } as any)
-      .select()
-      .single();
-
-    if (dbError) {
-      console.error('Error saving proposal:', dbError);
-      // Still return the generated proposal even if save fails
-    }
+      },
+    });
 
     // Store embedding asynchronously (don't wait for it)
-    if (proposal && 'id' in proposal) {
-      storeProposalEmbedding(proposal.id as string, body.requirements).catch(console.error);
-    }
+    storeProposalEmbedding(proposal.id, body.requirements).catch(console.error);
 
     return NextResponse.json({
       ...result,
-      proposal_id: proposal?.id,
+      proposal_id: proposal.id,
     });
   } catch (error: any) {
     console.error('Error generating proposal:', error);
