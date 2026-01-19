@@ -21,6 +21,7 @@ model User {
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
+  proposals     Proposal[] @relation("ProposalCreatedBy")
 
   @@index([email])
   @@map("users")
@@ -37,12 +38,15 @@ model Proposal {
   timelineWeeks      Int?     @map("timeline_weeks")
   complexity         String?
   status             String   @default("draft") // 'draft', 'sent', 'accepted', 'rejected'
+  createdById        String?  @map("created_by_id")
+  createdBy          User?    @relation("ProposalCreatedBy", fields: [createdById], references: [id])
   embedding          String?  @db.Text // Storing as JSON string for pgvector compatibility
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@index([projectType])
   @@index([status])
+  @@index([createdById])
   @@map("proposals")
 }
 

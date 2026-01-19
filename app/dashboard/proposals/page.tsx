@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,16 +11,21 @@ import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/status-badge';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, Pencil, Trash2 } from 'lucide-react';
 import type { Proposal, ProjectType, ProposalStatus } from '@/types';
 
 export default function ProposalsPage() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [filteredProposals, setFilteredProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ProjectType | 'all'>('all');
+  const { data: session } = useSession();
+
+  const userId = session?.user?.id;
+  const isAdmin = session?.user?.role === 'ADMIN';
 
   useEffect(() => {
     fetchProposals();
@@ -66,6 +72,27 @@ export default function ProposalsPage() {
     }
 
     setFilteredProposals(filtered);
+  }
+
+  async function handleDelete(id: string) {
+    if (deletingId) return;
+    const confirmed = window.confirm('Delete this proposal?');
+    if (!confirmed) return;
+    setDeletingId(id);
+
+    try {
+      const res = await fetch(`/api/proposals/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || 'Failed to delete proposal');
+      }
+      setProposals((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      console.error('Error deleting proposal:', error);
+      alert('Unable to delete proposal.');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   if (loading) {
@@ -178,12 +205,33 @@ export default function ProposalsPage() {
                     </TableCell>
                     <TableCell>{formatDate(proposal.created_at)}</TableCell>
                     <TableCell>
-                      <Link href={`/dashboard/proposals/${proposal.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/dashboard/proposals/${proposal.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </Button>
+                        </Link>
+                        {(isAdmin || proposal.created_by_id === userId || proposal.createdById === userId) && (
+                          <>
+                            <Link href={`/dashboard/proposals/${proposal.id}`}>
+                              <Button variant="ghost" size="sm">
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(proposal.id)}
+                              disabled={deletingId === proposal.id}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {deletingId === proposal.id ? 'Deleting...' : 'Delete'}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

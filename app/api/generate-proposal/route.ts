@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateProposal } from '@/lib/proposal-generator';
 import { storeProposalEmbedding } from '@/lib/vector-search';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import type { ProposalGenerationRequest } from '@/types';
 
 export const runtime = 'nodejs';
@@ -10,6 +11,7 @@ export const maxDuration = 60; // 60 seconds for AI generation
 export async function POST(request: NextRequest) {
   try {
     const body: ProposalGenerationRequest = await request.json();
+    const session = await auth();
 
     // Validate input
     if (!body.client_name || !body.requirements) {
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
         timelineWeeks: result.timeline_weeks,
         complexity: result.complexity,
         status: 'draft',
+        createdById: session?.user?.id ?? null,
       },
     });
 

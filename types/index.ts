@@ -15,6 +15,8 @@ export interface Proposal {
   timeline_weeks?: number;
   complexity?: Complexity;
   status: ProposalStatus;
+  created_by_id?: string;
+  createdById?: string; // camelCase fallback
   created_at: string;
   updated_at: string;
   embedding?: number[];
