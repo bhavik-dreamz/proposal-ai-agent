@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { GenerationProgress } from '@/components/generation-progress';
 import { AgentStatus } from '@/components/agent-status';
+import { SearchReport } from '@/components/search-report';
 import { Bot, DollarSign, FileSearch, FileText, Wand2 } from 'lucide-react';
 import type { Proposal } from '@/types';
 
@@ -19,6 +20,7 @@ export default function NewProposalPage() {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [searchReport, setSearchReport] = useState<any>(null);
 
   const generationSteps = [
     { id: 1, label: 'Reviewing client requirements' },
@@ -139,6 +141,12 @@ export default function NewProposalPage() {
           updated_at: new Date().toISOString(),
         });
       }
+      
+      // Store search report
+      if (result.search_report) {
+        setSearchReport(result.search_report);
+      }
+      
       generationSuccessful = true;
     } catch (err: any) {
       setError(err.message || 'Failed to generate proposal');
@@ -227,21 +235,24 @@ export default function NewProposalPage() {
           </Card>
         </div>
       ) : (
-        <Tabs defaultValue="preview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="edit">Edit</TabsTrigger>
-          </TabsList>
-          <TabsContent value="preview">
-            <ProposalPreview proposal={proposal} />
-          </TabsContent>
-          <TabsContent value="edit">
-            <ProposalEditor
-              content={proposal.generated_proposal || ''}
-              onSave={handleSaveEdit}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-6">
+          {searchReport && <SearchReport report={searchReport} />}
+          <Tabs defaultValue="preview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+              <TabsTrigger value="edit">Edit</TabsTrigger>
+            </TabsList>
+            <TabsContent value="preview">
+              <ProposalPreview proposal={proposal} />
+            </TabsContent>
+            <TabsContent value="edit">
+              <ProposalEditor
+                content={proposal.generated_proposal || ''}
+                onSave={handleSaveEdit}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       )}
     </div>
   );

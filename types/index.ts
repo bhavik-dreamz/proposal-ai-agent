@@ -122,4 +122,14 @@ export interface ProposalGenerationResponse {
   complexity: Complexity;
   similar_proposals?: (Proposal | SampleProposal)[];
   agent_flow?: string[];
+  search_report?: {
+    query: string;
+    total_found: number;
+    results: Array<{
+      title: string;
+      similarity: number;
+      relevance: 'high' | 'medium' | 'low';
+      source: 'sample' | 'previous';
+    }>;
+  };
 }

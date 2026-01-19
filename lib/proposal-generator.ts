@@ -268,14 +268,26 @@ export async function generateProposal(
     calculateEstimate(request.requirements, projectType, complexity),
   ]);
 
-  // Build context for AI - handle both sample and previous proposals
-  const similarProposalsContext = similarProposals
-    .map((p, i) => {
-      // Check if it's a SampleProposal or Proposal type
-      const content = (p as any).fullContent || (p as any).full_content || (p as any).generatedProposal || '';
-      return `Example ${i + 1}:\n${content.substring(0, 1000)}...`;
+  // Build context for AI - handle search results with relevance
+  const searchResultsContext = similarProposals
+    .map((result: any, i) => {
+      const isSearchResult = result.similarity !== undefined;
+      const relevance = isSearchResult ? result.relevance : 'medium';
+      const source = isSearchResult ? result.source : 'unknown';
+      const similarity = isSearchResult ? Math.round(result.similarity * 100) : 0;
+      
+      const content = (result.proposal as any).fullContent || 
+                     (result.proposal as any).generatedProposal || 
+                     (result.proposal as any).requirements || '';
+      
+      return `
+Similar Proposal ${i + 1} (${relevance} relevance - ${similarity}% match from ${source}):
+Title: ${result.title || 'N/A'}
+---
+${content.substring(0, 800)}...
+---`;
     })
-    .join('\n\n');
+    .join('\n');
 
   const techStackContext = techStack
     ? `Tech Stack: ${techStack.name}\nDescription: ${techStack.description}\nStrengths: ${(techStack.additionalInfo as any)?.strengths?.join(', ')}\nBest For: ${(techStack.additionalInfo as any)?.best_for?.join(', ')}`
@@ -290,6 +302,8 @@ You are an AI agent acting as a developer, technical consultant, and proposal ma
 
 Your goal is to analyze client project requirements and produce professional, conversational proposals that feel like they're coming from a real person—clear, practical, scalable, and budget-conscious.
 
+IMPORTANT: You have access to similar successful proposals below. Use their structure, language, and approach as a template. Study what worked in similar projects and replicate that success pattern.
+
 TONE & STYLE
 Write like a real person, not a corporate template:
 - Use conversational language and shorter sentences
@@ -298,6 +312,7 @@ Write like a real person, not a corporate template:
 - Use natural transitions ("So from what I'm getting...", "Here's roughly how we'd approach it")
 - Drop the robotic bullet-point heavy formatting when it doesn't feel natural
 - Sound like you're actually talking to the client, not reading from a document
+- Mirror the tone and structure from successful similar proposals
 
 BEFORE WRITING ANY PROPOSAL
 Always begin by:
@@ -322,6 +337,7 @@ When a client's project scope is provided, you must:
    - Scalable for future growth
    - Cost-effective
    - Aligned with the client's current stage and goals
+   - SIMILAR IN STRUCTURE to the successful proposals provided below
 
 ESTIMATION RULES (HOURS ONLY)
 - Never include currency or pricing
@@ -385,7 +401,39 @@ EXAMPLE STRUCTURE
 5. Clear clarification questions
 6. Friendly closing
 
-Remember: Sound like a real person having a conversation with the client, not an AI template. Only include relevant content in the proposal—no unnecessary information or generic filler.`;
+LEARN FROM PAST SUCCESSES
+Study the similar proposals provided below and:
+- Adopt their proven structure and flow
+- Use their successful language patterns
+- Follow their approach to explaining timelines and deliverables
+- Mirror their tone and engagement style
+
+IMPORTANT NOTES
+- All timelines are approximate
+- Estimates may be revised after full requirement validation or technical review
+- If information is missing, ask questions before finalizing estimates
+- Be transparent about what's included and what might require extra work
+- Keep proposals focused and relevant—avoid unnecessary content or generic filler
+- YOUR PROPOSALS SHOULD BE SIMILAR IN TONE AND STRUCTURE TO THE SUCCESSFUL EXAMPLES PROVIDED
+
+OUTPUT STYLE
+- Conversational paragraphs, not template-heavy
+- Use natural section breaks, not excessive formatting
+- Bullet points only when they genuinely help readability (like final timeline summary)
+- Simple, non-technical language unless the client is clearly technical
+- Confident, helpful, and genuine tone
+- No emojis, no overly casual language (keep it professional)
+- Sign off naturally (e.g., "Let me know your thoughts" or "Cheers")
+
+EXAMPLE STRUCTURE (based on successful past proposals)
+1. Brief thank you + acknowledgment
+2. Show you understand their goals (in your words)
+3. Natural explanation of approach and phases
+4. Realistic hour estimates woven into conversation
+5. Clear clarification questions
+6. Friendly closing
+
+Remember: Sound like a real person having a conversation with the client. Use the successful proposal patterns below as your template. Match their structure and tone.`;
 
   const userPrompt = `Generate a professional proposal for:
 
@@ -397,16 +445,24 @@ ${request.requirements}
 
 Project Type: ${projectType}
 Complexity: ${complexity}
-Estimated Cost: $${estimate.cost}
 Estimated Timeline: ${estimate.timelineWeeks} weeks
 
 ${techStackContext ? `\n${techStackContext}\n` : ''}
 
-${similarProposalsContext ? `\nSimilar Past Proposals for Reference:\n${similarProposalsContext}\n` : ''}
+CRITICAL: Use these successful similar proposals as your template for structure and tone:
+${searchResultsContext || 'No similar proposals found - create a new unique proposal'}
 
-${templateContent ? `\nTemplate Structure (use as guide, but personalize):\n${templateContent}\n` : ''}
+${templateContent ? `\nTemplate Structure (use as guide):\n${templateContent}\n` : ''}
 
-Generate a complete, professional proposal that addresses all requirements. Replace placeholders like {CLIENT_NAME}, {REQUIREMENTS_SUMMARY}, etc. with actual content.`;
+Instructions:
+1. Study the similar proposals above - they are successful and proven
+2. Use their structure, flow, and tone as your template
+3. Adapt their content to this client's specific requirements
+4. Match their professional yet conversational style
+5. Include similar sections and explanations
+6. Generate a complete, professional proposal that addresses all requirements
+
+Generate the proposal now, using the successful examples as your guide.`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -421,6 +477,18 @@ Generate a complete, professional proposal that addresses all requirements. Repl
 
     const proposal = response.choices[0]?.message?.content || '';
 
+    // Generate search report from similar proposals
+    const searchReport = similarProposals && similarProposals.length > 0 ? {
+      query: request.requirements.substring(0, 100),
+      total_found: similarProposals.length,
+      results: (similarProposals as any[]).map(p => ({
+        title: p.title || p.clientName || 'Untitled',
+        similarity: p.similarity ? Math.round(p.similarity * 100) : 0,
+        relevance: p.relevance || 'medium',
+        source: p.source || 'unknown',
+      })),
+    } : undefined;
+
     return {
       proposal,
       cost_estimate: estimate.cost,
@@ -429,6 +497,7 @@ Generate a complete, professional proposal that addresses all requirements. Repl
       complexity,
       similar_proposals: similarProposals,
       agent_flow: agentFlow,
+      search_report: searchReport,
     };
   } catch (error) {
     console.error('Error generating proposal:', error);
