@@ -95,9 +95,9 @@ export function ProposalPreview({ proposal, showMetadata = true }: ProposalPrevi
             Created: {formatDate(proposal.created_at)}
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-8">
           {proposal.generated_proposal ? (
-            <div className="prose prose-sm max-w-none dark:prose-invert">
+            <div className="prose prose-base max-w-none dark:prose-invert prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-strong:text-gray-900 dark:prose-strong:text-gray-100">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {proposal.generated_proposal}
               </ReactMarkdown>
