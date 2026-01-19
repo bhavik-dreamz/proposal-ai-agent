@@ -1,5 +1,5 @@
 import { openai } from './openai';
-import { supabaseAdmin } from './supabase';
+import { prisma } from './prisma';
 import { searchSimilarProposals } from './vector-search';
 import type { 
   ProposalGenerationRequest, 
@@ -32,7 +32,7 @@ Return only the stack name (e.g., "MERN" or "Shopify"):`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'openai/gpt-oss-120b',
       messages: [
         {
           role: 'system',
@@ -75,7 +75,7 @@ Return only: simple, medium, or complex`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'openai/gpt-oss-120b',
       messages: [
         {
           role: 'system',
@@ -103,38 +103,35 @@ Return only: simple, medium, or complex`;
  * Get tech stack information
  */
 export async function getTechStackInfo(projectType: ProjectType): Promise<TechStack | null> {
-  const { data, error } = await supabaseAdmin
-    .from('tech_stacks')
-    .select('*')
-    .eq('name', projectType)
-    .single();
+  try {
+    const techStack = await prisma.techStack.findUnique({
+      where: { name: projectType },
+    });
 
-  if (error || !data) {
+    return techStack as TechStack | null;
+  } catch (error) {
     console.error('Error fetching tech stack:', error);
     return null;
   }
-
-  return data as TechStack;
 }
 
 /**
  * Get template for project type
  */
 export async function getTemplate(projectType: ProjectType): Promise<Template | null> {
-  const { data, error } = await supabaseAdmin
-    .from('templates')
-    .select('*')
-    .eq('project_type', projectType)
-    .eq('is_active', true)
-    .limit(1)
-    .single();
+  try {
+    const template = await prisma.template.findFirst({
+      where: {
+        projectType,
+        isActive: true,
+      },
+    });
 
-  if (error || !data) {
+    return template as Template | null;
+  } catch (error) {
     console.error('Error fetching template:', error);
     return null;
   }
-
-  return data as Template;
 }
 
 /**
@@ -167,7 +164,7 @@ Example format: ["User Authentication", "Payment Gateway", "Admin Dashboard"]`;
   let features: string[] = [];
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'openai/gpt-oss-120b',
       messages: [
         {
           role: 'system',
@@ -196,30 +193,34 @@ Example format: ["User Authentication", "Payment Gateway", "Admin Dashboard"]`;
   }
 
   // Get pricing rules
-  const { data: pricingRules } = await supabaseAdmin
-    .from('pricing_rules')
-    .select('*')
-    .or(`project_type.is.null,project_type.eq.${projectType}`);
+  const pricingRules = await prisma.pricingRule.findMany({
+    where: {
+      OR: [
+        { projectType: null },
+        { projectType },
+      ],
+    },
+  });
 
   // Calculate base cost
-  let totalCost = techStack.base_cost;
-  let totalHours = techStack.base_timeline_weeks * 40; // Assume 40 hours per week
+  let totalCost = Number(techStack.baseCost || 0);
+  let totalHours = (techStack.baseTimelineWeeks || 0) * 40; // Assume 40 hours per week
 
   // Add feature costs
   for (const feature of features) {
     const matchingRule = pricingRules?.find(
       (rule) =>
-        rule.feature_name.toLowerCase().includes(feature.toLowerCase()) ||
-        feature.toLowerCase().includes(rule.feature_name.toLowerCase())
+        rule.featureName.toLowerCase().includes(feature.toLowerCase()) ||
+        feature.toLowerCase().includes(rule.featureName.toLowerCase())
     );
 
     if (matchingRule) {
-      const multiplier = matchingRule.complexity_multiplier[complexity] || 1;
-      totalCost += matchingRule.base_cost * multiplier;
-      totalHours += matchingRule.time_hours * multiplier;
+      const multiplier = (matchingRule.complexityMultiplier as any)?.[complexity] || 1;
+      totalCost += Number(matchingRule.baseCost || 0) * multiplier;
+      totalHours += (matchingRule.timeHours || 0) * multiplier;
     } else {
       // Default feature cost
-      totalCost += techStack.cost_per_feature;
+      totalCost += Number(techStack.costPerFeature || 0);
       totalHours += 8; // 8 hours per feature
     }
   }
@@ -237,7 +238,7 @@ Example format: ["User Authentication", "Payment Gateway", "Admin Dashboard"]`;
 
   return {
     cost: totalCost,
-    timelineWeeks: Math.max(timelineWeeks, techStack.base_timeline_weeks),
+    timelineWeeks: Math.max(timelineWeeks, techStack.baseTimelineWeeks || 0),
   };
 }
 
@@ -261,11 +262,11 @@ export async function generateProposal(
 
   // Build context for AI
   const similarProposalsContext = similarProposals
-    .map((p, i) => `Example ${i + 1}:\n${p.full_content.substring(0, 1000)}...`)
+    .map((p, i) => `Example ${i + 1}:\n${(p.fullContent || p.full_content || '').substring(0, 1000)}...`)
     .join('\n\n');
 
   const techStackContext = techStack
-    ? `Tech Stack: ${techStack.name}\nDescription: ${techStack.description}\nStrengths: ${techStack.additional_info?.strengths?.join(', ')}\nBest For: ${techStack.additional_info?.best_for?.join(', ')}`
+    ? `Tech Stack: ${techStack.name}\nDescription: ${techStack.description}\nStrengths: ${(techStack.additionalInfo as any)?.strengths?.join(', ')}\nBest For: ${(techStack.additionalInfo as any)?.best_for?.join(', ')}`
     : '';
 
   const templateContent = template?.content || '';
@@ -319,7 +320,7 @@ Generate a complete, professional proposal that addresses all requirements. Repl
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-oss-120b',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },

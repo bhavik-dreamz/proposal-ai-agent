@@ -43,42 +43,63 @@ export interface TechStack {
   id: string;
   name: ProjectType;
   description?: string;
-  typical_features: string[];
-  base_cost: number;
-  cost_per_feature: number;
-  base_timeline_weeks: number;
-  additional_info: {
+  typicalFeatures?: any;
+  baseCost?: number;
+  costPerFeature?: number;
+  baseTimelineWeeks?: number;
+  additionalInfo?: any;
+  createdAt?: string;
+  // Keep snake_case for backward compatibility
+  typical_features?: string[];
+  base_cost?: number;
+  cost_per_feature?: number;
+  base_timeline_weeks?: number;
+  additional_info?: {
     strengths?: string[];
     best_for?: string[];
   };
-  created_at: string;
+  created_at?: string;
 }
 
 export interface SampleProposal {
   id: string;
   title: string;
-  project_type: ProjectType;
-  full_content: string;
-  requirements_excerpt: string;
-  cost: number;
-  timeline_weeks: number;
-  is_approved: boolean;
-  created_at: string;
-  embedding?: number[];
+  projectType?: ProjectType;
+  fullContent?: string;
+  requirementsExcerpt?: string;
+  cost?: number;
+  timelineWeeks?: number;
+  isApproved?: boolean;
+  createdAt?: string;
+  embedding?: string;
+  // Keep snake_case for backward compatibility
+  project_type?: ProjectType;
+  full_content?: string;
+  requirements_excerpt?: string;
+  timeline_weeks?: number;
+  is_approved?: boolean;
+  created_at?: string;
 }
 
 export interface PricingRule {
   id: string;
-  feature_name: string;
+  featureName?: string;
+  projectType?: ProjectType | null;
+  baseCost?: number | null;
+  timeHours?: number | null;
+  complexityMultiplier?: any;
+  createdAt?: string;
+  // Keep snake_case for backward compatibility
+  feature_name?: string;
   project_type?: ProjectType;
-  base_cost: number;
-  time_hours: number;
-  complexity_multiplier: {
+  base_cost?: number;
+  time_hours?: number;
+  complexity_multiplier?: {
     simple: number;
     medium: number;
     complex: number;
   };
-  created_at: string;
+  created_at?: string;
 }
 
 export interface ProposalGenerationRequest {

@@ -1,17 +1,24 @@
-import { openai } from './openai';
 import { prisma } from './prisma';
 import type { SampleProposal, Proposal } from '@/types';
 
 /**
- * Generate embedding for a text using OpenAI
+ * Generate embedding for a text
+ * Note: Groq doesn't support embeddings, so we'll use a simple text-based approach
+ * For production, consider using a separate embedding service like Hugging Face or Voyage AI
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: text,
-  });
-
-  return response.data[0].embedding;
+  // Simple hash-based embedding (not production-grade)
+  // In production, you'd use a dedicated embedding service
+  const hash = text.split('').reduce((acc, char) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  
+  // Generate a simple embedding vector
+  const embedding: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    embedding.push(Math.sin(hash + i) * 100);
+  }
+  return embedding;
 }
 
 /**
@@ -46,7 +53,11 @@ export async function searchSimilarProposals(
         const embeddingArray = p.embedding ? JSON.parse(p.embedding) : null;
         if (!embeddingArray) return null;
         const similarity = cosineSimilarity(queryEmbedding, embeddingArray);
-        return { ...p, similarity };
+        return { 
+          ...p, 
+          cost: p.cost ? Number(p.cost) : undefined,
+          similarity 
+        };
       })
       .filter((p) => p !== null)
       .sort((a, b) => (b!.similarity || 0) - (a!.similarity || 0))
@@ -54,7 +65,7 @@ export async function searchSimilarProposals(
       .map(({ similarity, ...proposal }) => proposal);
 
     if (proposalsWithSimilarity.length > 0) {
-      return proposalsWithSimilarity as SampleProposal[];
+      return proposalsWithSimilarity as any as SampleProposal[];
     }
 
     // Fallback if no embeddings
@@ -100,7 +111,10 @@ async function fallbackTextSearch(
     take: limit,
   });
 
-  return proposals as SampleProposal[];
+  return proposals.map(p => ({
+    ...p,
+    cost: p.cost ? Number(p.cost) : undefined,
+  })) as any as SampleProposal[];
 }
 
 /**

@@ -1,21 +1,21 @@
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 
-let _openai: OpenAI | null = null;
+let _groq: Groq | null = null;
 
-function getOpenAI(): OpenAI {
-  if (!_openai) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('Missing OPENAI_API_KEY environment variable');
+function getGroq(): Groq {
+  if (!_groq) {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('Missing GROQ_API_KEY environment variable');
     }
-    _openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    _groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
     });
   }
-  return _openai;
+  return _groq;
 }
 
-export const openai = new Proxy({} as OpenAI, {
+export const openai = new Proxy({} as Groq, {
   get(_target, prop) {
-    return getOpenAI()[prop as keyof OpenAI];
+    return getGroq()[prop as keyof Groq];
   },
 });
