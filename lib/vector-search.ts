@@ -170,21 +170,27 @@ async function fallbackCombinedSearch(
   ]);
 
   // Simple text-based matching for fallback
-  const scored = [
-    ...(samples || []).map((p) => ({
-      proposal: { ...p, cost: p.cost ? Number(p.cost) : undefined },
-      similarity: calculateTextSimilarity(queryLower, (p.fullContent || '').toLowerCase()),
-      source: 'sample' as const,
-      title: p.title,
-      relevance: 'medium' as const,
-    })),
-    ...(previous || []).map((p) => ({
-      proposal: p,
-      similarity: calculateTextSimilarity(queryLower, (p.requirements || '').toLowerCase()),
-      source: 'previous' as const,
-      title: p.clientName,
-      relevance: 'medium' as const,
-    })),
+  const scored: SearchResult[] = [
+    ...(samples || []).map((p) => {
+      const similarity = calculateTextSimilarity(queryLower, (p.fullContent || '').toLowerCase());
+      return {
+        proposal: { ...p, cost: p.cost ? Number(p.cost) : undefined } as any,
+        similarity,
+        source: 'sample' as const,
+        title: p.title,
+        relevance: getRelevanceLevel(similarity),
+      };
+    }),
+    ...(previous || []).map((p) => {
+      const similarity = calculateTextSimilarity(queryLower, (p.requirements || '').toLowerCase());
+      return {
+        proposal: p as any,
+        similarity,
+        source: 'previous' as const,
+        title: p.clientName,
+        relevance: getRelevanceLevel(similarity),
+      };
+    }),
   ]
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit);
