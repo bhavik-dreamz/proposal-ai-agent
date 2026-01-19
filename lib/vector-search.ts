@@ -1,14 +1,6 @@
 import { prisma } from './prisma';
 import { openai } from './openai';
-import type { SampleProposal, Proposal } from '@/types';
-
-export interface SearchResult {
-  proposal: SampleProposal | Proposal;
-  similarity: number;
-  source: 'sample' | 'previous';
-  title: string;
-  relevance: 'high' | 'medium' | 'low';
-}
+import type { SearchResult } from '@/types';
 
 /**
  * Generate embedding using OpenAI text-embedding-3-small model
@@ -16,13 +8,14 @@ export interface SearchResult {
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const response = await (openai.embeddings.create as any)({
+    const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text.substring(0, 8191), // API limit
-      encoding_format: 'float',
+      encoding_format: 'float' as const,
     });
 
-    return response.data[0].embedding;
+    const embedding = response.data[0].embedding;
+    return Array.isArray(embedding) ? embedding : [];
   } catch (error) {
     console.error('Error generating embedding:', error);
     // Fallback to simple embedding if API fails
@@ -131,8 +124,22 @@ export async function searchSimilarProposals(
   }
 }
 
-/**
- * Determine relevance level based on similarity score
+/** * Calculate text similarity using simple string matching
+ */
+function calculateTextSimilarity(text1: string, text2: string): number {
+  if (!text1 || !text2) return 0;
+
+  // Simple word overlap calculation
+  const words1 = new Set(text1.split(/\s+/).filter((w) => w.length > 3));
+  const words2 = new Set(text2.split(/\s+/).filter((w) => w.length > 3));
+
+  const intersection = new Set([...words1].filter((x) => words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+
+  return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+/** * Determine relevance level based on similarity score
  */
 function getRelevanceLevel(similarity: number): 'high' | 'medium' | 'low' {
   if (similarity >= 0.7) return 'high';
@@ -174,7 +181,7 @@ async function fallbackCombinedSearch(
     ...(samples || []).map((p) => {
       const similarity = calculateTextSimilarity(queryLower, (p.fullContent || '').toLowerCase());
       return {
-        proposal: { ...p, cost: p.cost ? Number(p.cost) : undefined } as any,
+        proposal: { ...p, cost: p.cost ? Number(p.cost) : undefined } as Record<string, unknown>,
         similarity,
         source: 'sample' as const,
         title: p.title,
@@ -184,10 +191,10 @@ async function fallbackCombinedSearch(
     ...(previous || []).map((p) => {
       const similarity = calculateTextSimilarity(queryLower, (p.requirements || '').toLowerCase());
       return {
-        proposal: p as any,
+        proposal: p as Record<string, unknown>,
         similarity,
         source: 'previous' as const,
-        title: p.clientName,
+        title: p.clientName || '',
         relevance: getRelevanceLevel(similarity),
       };
     }),
@@ -196,17 +203,6 @@ async function fallbackCombinedSearch(
     .slice(0, limit);
 
   return scored as SearchResult[];
-}
-
-/**
- * Calculate simple text similarity score
- */
-function calculateTextSimilarity(query: string, text: string): number {
-  const queryWords = query.split(/\s+/).filter(w => w.length > 3);
-  if (queryWords.length === 0) return 0;
-
-  const matches = queryWords.filter(word => text.includes(word)).length;
-  return matches / queryWords.length;
 }
 
 /**

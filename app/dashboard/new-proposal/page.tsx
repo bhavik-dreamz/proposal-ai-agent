@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ProposalForm } from '@/components/proposal-form';
 import { ProposalPreview } from '@/components/proposal-preview';
 import { ProposalEditor } from '@/components/proposal-editor';
@@ -12,15 +11,14 @@ import { GenerationProgress } from '@/components/generation-progress';
 import { AgentStatus } from '@/components/agent-status';
 import { SearchReport } from '@/components/search-report';
 import { Bot, DollarSign, FileSearch, FileText, Wand2 } from 'lucide-react';
-import type { Proposal } from '@/types';
+import type { Proposal, ProposalGenerationResponse } from '@/types';
 
 export default function NewProposalPage() {
-  const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
-  const [searchReport, setSearchReport] = useState<any>(null);
+  const [searchReport, setSearchReport] = useState<ProposalGenerationResponse['search_report'] | null>(null);
 
   const generationSteps = [
     { id: 1, label: 'Reviewing client requirements' },
@@ -148,8 +146,9 @@ export default function NewProposalPage() {
       }
       
       generationSuccessful = true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate proposal');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to generate proposal';
+      setError(errorMsg);
       console.error('Error generating proposal:', err);
     } finally {
       stopProgress(generationSuccessful);
@@ -173,7 +172,7 @@ export default function NewProposalPage() {
 
       const result = await response.json();
       setProposal(result.proposal);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error saving proposal:', err);
       alert('Failed to save proposal. Please try again.');
     }

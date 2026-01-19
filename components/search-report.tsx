@@ -57,7 +57,7 @@ export function SearchReport({ report }: SearchReportProps) {
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground">
           <p className="font-medium mb-2">Searched query:</p>
-          <p className="italic">"{report.query.substring(0, 150)}..."</p>
+          <p className="italic">&quot;{report.query.substring(0, 150)}&quot;</p>
         </div>
 
         <div className="space-y-3">

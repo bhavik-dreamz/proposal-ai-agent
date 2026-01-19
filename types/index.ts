@@ -47,11 +47,14 @@ export interface TechStack {
   id: string;
   name: ProjectType;
   description?: string;
-  typicalFeatures?: any;
+  typicalFeatures?: string[];
   baseCost?: number;
   costPerFeature?: number;
   baseTimelineWeeks?: number;
-  additionalInfo?: any;
+  additionalInfo?: {
+    strengths?: string[];
+    best_for?: string[];
+  };
   createdAt?: string;
   // Keep snake_case for backward compatibility
   typical_features?: string[];
@@ -91,7 +94,11 @@ export interface PricingRule {
   projectType?: ProjectType | null;
   baseCost?: number | null;
   timeHours?: number | null;
-  complexityMultiplier?: any;
+  complexityMultiplier?: {
+    simple: number;
+    medium: number;
+    complex: number;
+  };
   createdAt?: string;
   // Keep snake_case for backward compatibility
   feature_name?: string;
@@ -114,13 +121,21 @@ export interface ProposalGenerationRequest {
   complexity?: Complexity;
 }
 
+export interface SearchResult {
+  proposal: Record<string, unknown>;
+  similarity: number;
+  source: 'sample' | 'previous';
+  title: string;
+  relevance: 'high' | 'medium' | 'low';
+}
+
 export interface ProposalGenerationResponse {
   proposal: string;
   cost_estimate: number;
   timeline_weeks: number;
   project_type: ProjectType;
   complexity: Complexity;
-  similar_proposals?: any[];
+  similar_proposals?: SearchResult[];
   agent_flow?: string[];
   search_report?: {
     query: string;

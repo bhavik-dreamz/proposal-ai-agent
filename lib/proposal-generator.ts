@@ -8,7 +8,7 @@ import type {
   Complexity,
   TechStack,
   Template,
-  PricingRule
+  SearchResult,
 } from '@/types';
 
 /**
@@ -210,12 +210,13 @@ Example format: ["User Authentication", "Payment Gateway", "Admin Dashboard"]`;
   for (const feature of features) {
     const matchingRule = pricingRules?.find(
       (rule) =>
-        rule.featureName.toLowerCase().includes(feature.toLowerCase()) ||
-        feature.toLowerCase().includes(rule.featureName.toLowerCase())
+        rule.featureName?.toLowerCase().includes(feature.toLowerCase()) ||
+        feature.toLowerCase().includes(rule.featureName?.toLowerCase() || '')
     );
 
     if (matchingRule) {
-      const multiplier = (matchingRule.complexityMultiplier as any)?.[complexity] || 1;
+      const complexityMap = matchingRule.complexityMultiplier || { simple: 1, medium: 1, complex: 1 };
+      const multiplier = (complexityMap as Record<string, number>)[complexity] || 1;
       totalCost += Number(matchingRule.baseCost || 0) * multiplier;
       totalHours += (matchingRule.timeHours || 0) * multiplier;
     } else {
@@ -270,15 +271,16 @@ export async function generateProposal(
 
   // Build context for AI - handle search results with relevance
   const searchResultsContext = similarProposals
-    .map((result: any, i) => {
+    .map((result: SearchResult, i: number) => {
       const isSearchResult = result.similarity !== undefined;
       const relevance = isSearchResult ? result.relevance : 'medium';
       const source = isSearchResult ? result.source : 'unknown';
       const similarity = isSearchResult ? Math.round(result.similarity * 100) : 0;
       
-      const content = (result.proposal as any).fullContent || 
-                     (result.proposal as any).generatedProposal || 
-                     (result.proposal as any).requirements || '';
+      const contentObj = result.proposal as Record<string, unknown>;
+      const content = (contentObj.fullContent as string) || 
+                     (contentObj.generatedProposal as string) || 
+                     (contentObj.requirements as string) || '';
       
       return `
 Similar Proposal ${i + 1} (${relevance} relevance - ${similarity}% match from ${source}):
@@ -289,8 +291,12 @@ ${content.substring(0, 800)}...
     })
     .join('\n');
 
+  const additionalInfo = techStack?.additionalInfo as Record<string, unknown> | undefined;
+  const strengths = (additionalInfo?.strengths as string[] | undefined)?.join(', ') || '';
+  const bestFor = (additionalInfo?.best_for as string[] | undefined)?.join(', ') || '';
+  
   const techStackContext = techStack
-    ? `Tech Stack: ${techStack.name}\nDescription: ${techStack.description}\nStrengths: ${(techStack.additionalInfo as any)?.strengths?.join(', ')}\nBest For: ${(techStack.additionalInfo as any)?.best_for?.join(', ')}`
+    ? `Tech Stack: ${techStack.name}\nDescription: ${techStack.description}\nStrengths: ${strengths}\nBest For: ${bestFor}`
     : '';
 
   const templateContent = template?.content || '';
@@ -481,8 +487,8 @@ Generate the proposal now, using the successful examples as your guide.`;
     const searchReport = similarProposals && similarProposals.length > 0 ? {
       query: request.requirements.substring(0, 100),
       total_found: similarProposals.length,
-      results: (similarProposals as any[]).map(p => ({
-        title: p.title || p.clientName || 'Untitled',
+      results: similarProposals.map((p: SearchResult) => ({
+        title: p.title || 'Untitled',
         similarity: p.similarity ? Math.round(p.similarity * 100) : 0,
         relevance: p.relevance || 'medium',
         source: p.source || 'unknown',
