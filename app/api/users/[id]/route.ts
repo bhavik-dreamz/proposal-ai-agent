@@ -7,9 +7,10 @@ import { Role } from "@prisma/client";
 // Update user (Admin only)
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const session = await auth();
 
     if (!session || session.user.role !== Role.ADMIN) {
@@ -54,9 +55,10 @@ export async function PATCH(
 // Delete user (Admin only)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const session = await auth();
 
     if (!session || session.user.role !== Role.ADMIN) {
