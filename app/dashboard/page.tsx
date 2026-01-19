@@ -141,6 +141,7 @@ export default function DashboardPage() {
                 <TableRow>
                   <TableHead>Client</TableHead>
                   <TableHead>Project Type</TableHead>
+                  <TableHead>Created By</TableHead>
                   <TableHead>Cost Estimate</TableHead>
                   <TableHead>Timeline</TableHead>
                   <TableHead>Status</TableHead>
@@ -156,6 +157,12 @@ export default function DashboardPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{proposal.project_type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">{proposal.created_by_name || 'Unknown'}</div>
+                        <div className="text-muted-foreground text-xs">{proposal.created_by_email || 'N/A'}</div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {proposal.cost_estimate
