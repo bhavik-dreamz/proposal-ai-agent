@@ -137,7 +137,7 @@ async function fallbackCombinedSearch(
     ...(samples || []).map((p) => ({
       ...p,
       cost: p.cost ? Number(p.cost) : undefined,
-      score: calculateTextSimilarity(queryLower, (p.fullContent || p.full_content || '').toLowerCase()),
+      score: calculateTextSimilarity(queryLower, (p.fullContent || '').toLowerCase()),
     })),
     ...(previous || []).map((p) => ({
       ...p,
