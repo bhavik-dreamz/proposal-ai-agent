@@ -120,6 +120,6 @@ export interface ProposalGenerationResponse {
   timeline_weeks: number;
   project_type: ProjectType;
   complexity: Complexity;
-  similar_proposals?: SampleProposal[];
+  similar_proposals?: (Proposal | SampleProposal)[];
   agent_flow?: string[];
 }
