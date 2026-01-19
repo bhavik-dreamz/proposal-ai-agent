@@ -18,6 +18,15 @@ export async function GET(request: NextRequest) {
         ...(status && { status }),
         ...(projectType && { projectType }),
       },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
@@ -34,6 +43,8 @@ export async function GET(request: NextRequest) {
       complexity: (p.complexity as Proposal['complexity']) ?? undefined,
       status: p.status as Proposal['status'],
       created_by_id: p.createdById ?? undefined,
+      created_by_name: p.createdBy?.name ?? undefined,
+      created_by_email: p.createdBy?.email ?? undefined,
       created_at: p.createdAt.toISOString(),
       updated_at: p.updatedAt.toISOString(),
       embedding: undefined,

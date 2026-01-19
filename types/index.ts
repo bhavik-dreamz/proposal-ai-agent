@@ -16,6 +16,8 @@ export interface Proposal {
   complexity?: Complexity;
   status: ProposalStatus;
   created_by_id?: string;
+  created_by_name?: string;
+  created_by_email?: string;
   createdById?: string; // camelCase fallback
   created_at: string;
   updated_at: string;

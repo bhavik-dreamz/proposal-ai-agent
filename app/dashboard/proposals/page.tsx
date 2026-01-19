@@ -14,6 +14,13 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { Search, Eye, Pencil, Trash2 } from 'lucide-react';
 import type { Proposal, ProjectType, ProposalStatus } from '@/types';
 
+interface UserStats {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  count: number;
+}
+
 export default function ProposalsPage() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [filteredProposals, setFilteredProposals] = useState<Proposal[]>([]);
@@ -22,6 +29,7 @@ export default function ProposalsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ProjectType | 'all'>('all');
+  const [userStats, setUserStats] = useState<UserStats[]>([]);
   const { data: session } = useSession();
 
   const userId = session?.user?.id;
@@ -33,6 +41,7 @@ export default function ProposalsPage() {
 
   useEffect(() => {
     filterProposals();
+    calculateUserStats();
   }, [proposals, searchQuery, statusFilter, typeFilter]);
 
   async function fetchProposals() {
@@ -45,6 +54,30 @@ export default function ProposalsPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function calculateUserStats() {
+    const stats = new Map<string, UserStats>();
+    
+    proposals.forEach((proposal) => {
+      const userId = proposal.created_by_id || 'unknown';
+      const userName = proposal.created_by_name || 'Unknown User';
+      const userEmail = proposal.created_by_email || 'N/A';
+      
+      if (stats.has(userId)) {
+        stats.get(userId)!.count++;
+      } else {
+        stats.set(userId, {
+          userId,
+          userName,
+          userEmail,
+          count: 1,
+        });
+      }
+    });
+    
+    const sortedStats = Array.from(stats.values()).sort((a, b) => b.count - a.count);
+    setUserStats(sortedStats);
   }
 
   function filterProposals() {
@@ -113,6 +146,42 @@ export default function ProposalsPage() {
         </Link>
       </div>
 
+      {/* User Statistics Report */}
+      {isAdmin && userStats.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Proposals Report - By User</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {userStats.map((stat) => (
+                <div
+                  key={stat.userId}
+                  className="p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{stat.userName}</p>
+                      <p className="text-xs text-muted-foreground">{stat.userEmail}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold">{stat.count}</p>
+                      <p className="text-xs text-muted-foreground">proposals</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Total Proposals</p>
+                <p className="text-xl font-bold">{proposals.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -174,6 +243,7 @@ export default function ProposalsPage() {
                 <TableRow>
                   <TableHead>Client</TableHead>
                   <TableHead>Project Type</TableHead>
+                  <TableHead>Created By</TableHead>
                   <TableHead>Cost Estimate</TableHead>
                   <TableHead>Timeline</TableHead>
                   <TableHead>Status</TableHead>
@@ -189,6 +259,12 @@ export default function ProposalsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{proposal.project_type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">{proposal.created_by_name || 'Unknown'}</div>
+                        <div className="text-muted-foreground text-xs">{proposal.created_by_email || 'N/A'}</div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {proposal.cost_estimate
