@@ -268,9 +268,13 @@ export async function generateProposal(
     calculateEstimate(request.requirements, projectType, complexity),
   ]);
 
-  // Build context for AI
+  // Build context for AI - handle both sample and previous proposals
   const similarProposalsContext = similarProposals
-    .map((p, i) => `Example ${i + 1}:\n${(p.fullContent || p.full_content || '').substring(0, 1000)}...`)
+    .map((p, i) => {
+      // Check if it's a SampleProposal or Proposal type
+      const content = (p as any).fullContent || (p as any).full_content || (p as any).generatedProposal || '';
+      return `Example ${i + 1}:\n${content.substring(0, 1000)}...`;
+    })
     .join('\n\n');
 
   const techStackContext = techStack

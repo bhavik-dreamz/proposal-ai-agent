@@ -22,58 +22,144 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 /**
- * Search for similar proposals using vector similarity
+ * Search for similar proposals from both sample proposals and previous proposals
+ * Uses vector similarity to find the most relevant matches
  */
 export async function searchSimilarProposals(
   query: string,
   projectType?: string,
   limit: number = 3
-): Promise<SampleProposal[]> {
+): Promise<(SampleProposal | Proposal)[]> {
   try {
     // Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
 
-    // Fetch sample proposals from database
-    const proposals = await prisma.sampleProposal.findMany({
-      where: {
-        isApproved: true,
-        ...(projectType && { projectType }),
-      },
-      take: limit * 2, // Get more results to filter
-    });
+    // Search both sample proposals and previous proposals in parallel
+    const [sampleProposals, previousProposals] = await Promise.all([
+      prisma.sampleProposal.findMany({
+        where: {
+          isApproved: true,
+          ...(projectType && { projectType }),
+        },
+        take: limit * 2,
+      }),
+      prisma.proposal.findMany({
+        where: {
+          status: { in: ['completed', 'approved'] },
+          ...(projectType && { projectType }),
+        },
+        take: limit * 2,
+      }),
+    ]);
 
-    if (!proposals || proposals.length === 0) {
-      return await fallbackTextSearch(query, projectType, limit);
-    }
-
-    // If embeddings exist, calculate cosine similarity
-    const proposalsWithSimilarity = proposals
+    // Calculate similarity for sample proposals
+    const sampleWithSimilarity = (sampleProposals || [])
       .filter((p) => p.embedding)
       .map((p) => {
         const embeddingArray = p.embedding ? JSON.parse(p.embedding) : null;
         if (!embeddingArray) return null;
         const similarity = cosineSimilarity(queryEmbedding, embeddingArray);
-        return { 
-          ...p, 
+        return {
+          ...p,
           cost: p.cost ? Number(p.cost) : undefined,
-          similarity 
+          similarity,
+          source: 'sample' as const,
         };
       })
-      .filter((p) => p !== null)
-      .sort((a, b) => (b!.similarity || 0) - (a!.similarity || 0))
-      .slice(0, limit)
-      .map(({ similarity, ...proposal }) => proposal);
+      .filter((p) => p !== null);
 
-    if (proposalsWithSimilarity.length > 0) {
-      return proposalsWithSimilarity as any as SampleProposal[];
+    // Calculate similarity for previous proposals
+    const previousWithSimilarity = (previousProposals || [])
+      .filter((p) => p.embedding)
+      .map((p) => {
+        const embeddingArray = p.embedding ? JSON.parse(p.embedding) : null;
+        if (!embeddingArray) return null;
+        const similarity = cosineSimilarity(queryEmbedding, embeddingArray);
+        return {
+          ...p,
+          similarity,
+          source: 'previous' as const,
+        };
+      })
+      .filter((p) => p !== null);
+
+    // Combine and sort by similarity, prioritizing samples then previous
+    const combined = [
+      ...sampleWithSimilarity.map(p => ({ ...p, isSample: true })),
+      ...previousWithSimilarity.map(p => ({ ...p, isSample: false })),
+    ]
+      .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+      .slice(0, limit)
+      .map(({ similarity, source, isSample, ...proposal }) => proposal);
+
+    if (combined.length > 0) {
+      return combined as any as (SampleProposal | Proposal)[];
     }
 
     // Fallback if no embeddings
-    return await fallbackTextSearch(query, projectType, limit);
+    return await fallbackCombinedSearch(query, projectType, limit);
   } catch (error) {
     console.error('Error in vector search:', error);
-    return await fallbackTextSearch(query, projectType, limit);
+    return await fallbackCombinedSearch(query, projectType, limit);
   }
+}
+
+/**
+ * Fallback combined search from both sample and previous proposals
+ */
+async function fallbackCombinedSearch(
+  query: string,
+  projectType?: string,
+  limit: number = 3
+): Promise<(SampleProposal | Proposal)[]> {
+  const queryLower = query.toLowerCase();
+
+  // Fetch from both tables
+  const [samples, previous] = await Promise.all([
+    prisma.sampleProposal.findMany({
+      where: {
+        isApproved: true,
+        ...(projectType && { projectType }),
+      },
+      take: limit,
+    }),
+    prisma.proposal.findMany({
+      where: {
+        status: { in: ['completed', 'approved'] },
+        ...(projectType && { projectType }),
+      },
+      take: limit,
+    }),
+  ]);
+
+  // Simple text-based matching for fallback
+  const scored = [
+    ...(samples || []).map((p) => ({
+      ...p,
+      cost: p.cost ? Number(p.cost) : undefined,
+      score: calculateTextSimilarity(queryLower, (p.fullContent || p.full_content || '').toLowerCase()),
+    })),
+    ...(previous || []).map((p) => ({
+      ...p,
+      score: calculateTextSimilarity(queryLower, (p.requirements || '').toLowerCase()),
+    })),
+  ]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ score, ...p }) => p);
+
+  return scored as any as (SampleProposal | Proposal)[];
+}
+
+/**
+ * Calculate simple text similarity score
+ */
+function calculateTextSimilarity(query: string, text: string): number {
+  const queryWords = query.split(/\s+/).filter(w => w.length > 3);
+  if (queryWords.length === 0) return 0;
+
+  const matches = queryWords.filter(word => text.includes(word)).length;
+  return matches / queryWords.length;
 }
 
 /**
@@ -93,28 +179,6 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
   }
 
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-/**
- * Fallback text-based search if vector search is not available
- */
-async function fallbackTextSearch(
-  query: string,
-  projectType?: string,
-  limit: number = 3
-): Promise<SampleProposal[]> {
-  const proposals = await prisma.sampleProposal.findMany({
-    where: {
-      isApproved: true,
-      ...(projectType && { projectType }),
-    },
-    take: limit,
-  });
-
-  return proposals.map(p => ({
-    ...p,
-    cost: p.cost ? Number(p.cost) : undefined,
-  })) as any as SampleProposal[];
 }
 
 /**
